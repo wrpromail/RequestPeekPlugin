@@ -2,7 +2,7 @@ displayName: TritonPlugin
 type: middleware
 iconPath: .assets/icon.png
 
-import: github.com/jasinxie/triton-traefik-plugin
+import: github.com/traefik/plugindemo
 
 summary: 'Traefik Plugin for Triton Server'
 
