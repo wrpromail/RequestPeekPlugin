@@ -2,7 +2,7 @@ displayName: TritonPlugin
 type: middleware
 iconPath: .assets/icon.png
 
-import: github.com/traefik/plugindemo
+import: github.com/jasinxie/TritonRateLimiter
 
 summary: 'Traefik Plugin for Triton Server'
 

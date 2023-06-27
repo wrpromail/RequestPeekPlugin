@@ -1,5 +1,4 @@
-// Package plugindemo demo demo plugin.
-package plugindemo
+package TritonRateLimiter
 
 import (
 	"context"
