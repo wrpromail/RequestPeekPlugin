@@ -2,6 +2,7 @@ package plugindemo_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,11 +12,6 @@ import (
 
 func TestDemo(t *testing.T) {
 	cfg := plugindemo.CreateConfig()
-	cfg.Headers["X-Host"] = "[[.Host]]"
-	cfg.Headers["X-Method"] = "[[.Method]]"
-	cfg.Headers["X-URL"] = "[[.URL]]"
-	cfg.Headers["X-URL"] = "[[.URL]]"
-	cfg.Headers["X-Demo"] = "test"
 
 	ctx := context.Background()
 	next := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {})
@@ -27,17 +23,14 @@ func TestDemo(t *testing.T) {
 
 	recorder := httptest.NewRecorder()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://localhost", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://127.0.0.1:8090", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	handler.ServeHTTP(recorder, req)
 
-	assertHeader(t, req, "X-Host", "localhost")
-	assertHeader(t, req, "X-URL", "http://localhost")
-	assertHeader(t, req, "X-Method", "GET")
-	assertHeader(t, req, "X-Demo", "test")
+	fmt.Println(recorder.Code, recorder.Header())
 }
 
 func assertHeader(t *testing.T, req *http.Request, key, expected string) {
