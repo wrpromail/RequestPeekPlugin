@@ -1,4 +1,4 @@
-module github.com/traefik/plugindemo
+module github.com/jasinxie/TritonRateLimiter
 
 go 1.19
 
