@@ -251,3 +251,12 @@ http:
 
 10 directories, 14 files
 ```
+使用如下命令启动
+```bash
+./traefik --configFile=traefik.sample.yml
+```
+打开 http://localhost:8080/dashboard/#/http/middlewares 页面可以看到这个插件
+![](.assets/img.png)
+
+也可以看到这个插件被哪些Routers使用到了
+![](.assets/img_1.png)
