@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strconv"
 	"text/template"
 	"time"
 
@@ -41,7 +42,7 @@ type Config struct {
 
 // for test
 func init() {
-	delay = 10000
+	delay = 0
 }
 
 // CreateConfig creates the default plugin configuration.
@@ -111,7 +112,8 @@ func (demo *Demo) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	go func() {
 		for {
 			// 更新指标
-			//delay = demo.getMetric()
+			delay = demo.getMetric()
+			log.Printf("current delay: %v ms", delay)
 			time.Sleep(time.Duration(demo.scrapeInterval) * time.Second)
 		}
 	}()
@@ -144,6 +146,7 @@ func (demo *Demo) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if delay > demo.blockThreshold {
 		rw.Header().Set("Content-Type", "application/grpc")
 		rw.WriteHeader(429)
+		rw.Write([]byte("the cluster is overload, please try later"))
 		return
 	}
 	demo.next.ServeHTTP(rw, req)
@@ -160,9 +163,8 @@ type PrometheusResponse struct {
 	} `json:"data"`
 }
 
-func (demo *Demo) doGet() {
+func (demo *Demo) getMetric() float64 {
 	url := fmt.Sprintf("%s/api/v1/query", demo.prometheusURL)
-	fmt.Println(url)
 
 	// 创建GET请求
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -205,12 +207,12 @@ func (demo *Demo) doGet() {
 
 	fmt.Printf("Status: %s\n", resp.Status)
 	fmt.Printf("ResultType: %s\n", resp.Data.ResultType)
+	var timestamp float64
+	var value string
 	for i, result := range resp.Data.Result {
 		fmt.Printf("Result %d:\n", i+1)
 		fmt.Printf("  Metric: %v\n", result.Metric)
 
-		var timestamp float64
-		var value string
 		err = json.Unmarshal(result.Value[0], &timestamp)
 		if err != nil {
 			panic(err)
@@ -221,4 +223,6 @@ func (demo *Demo) doGet() {
 		}
 		fmt.Printf("  Value: [%.3f, %s]\n", timestamp, value)
 	}
+	f, err := strconv.ParseFloat(value, 64)
+	return f
 }
