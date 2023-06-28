@@ -228,20 +228,6 @@ http:
 ├── LICENSE.md
 ├── dynamic.yaml
 ├── plugins-local
-│   ├── dev
-│   │   └── github.com
-│   │       └── jasinxie
-│   │           └── TritonRateLimiter
-│   │               ├── LICENSE
-│   │               ├── Makefile
-│   │               ├── demo.go
-│   │               ├── demo_test.go
-│   │               ├── go.mod
-│   │               ├── go.sum
-│   │               ├── ipchecking
-│   │               │   ├── ipChecking.go
-│   │               │   └── ipChecking_test.go
-│   │               └── readme.md
 │   └── src
 │       └── github.com
 │           └── jasinxie
@@ -262,4 +248,6 @@ http:
 │       └── gop-1576004276
 ├── traefik
 └── traefik.sample.yml
+
+10 directories, 14 files
 ```
