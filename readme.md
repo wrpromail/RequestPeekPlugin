@@ -3,6 +3,8 @@
 cloned from [plugindemo](https://github.com/traefik/plugindemo)
 
 ## 使用方式
+
+### 配置
 traefik配置文件 traefik.sample.yml 示例如下：
 ```yaml
 ################################################################
@@ -251,6 +253,8 @@ http:
 
 10 directories, 14 files
 ```
+
+### 启动
 使用如下命令启动
 ```bash
 ./traefik --configFile=traefik.sample.yml
@@ -260,3 +264,10 @@ http:
 
 也可以看到这个插件被哪些Routers使用到了
 ![](.assets/img_1.png)
+
+### 效果
+拒绝http请求
+![](.assets/img_2.png)
+
+拒绝grpc请求
+![](.assets/img_3.png)

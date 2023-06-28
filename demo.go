@@ -153,9 +153,9 @@ func (demo *Demo) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	rand.Seed(time.Now().UnixNano())
 	// 生成一个0到1之间的随机浮点数
 	randomValue := rand.Float64()
-	// 以20%的概率拒绝
+	// 以特定概率拒绝
 	if delay > demo.blockThreshold && randomValue <= demo.rejectProbability {
-		rw.Header().Set("Content-Type", "application/grpc")
+		//rw.Header().Set("Content-Type", "application/grpc")
 		rw.WriteHeader(429)
 		rw.Write([]byte("the cluster is overload, please try later"))
 
