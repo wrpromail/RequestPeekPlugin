@@ -10,7 +10,6 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
-	"os"
 	"strconv"
 	"text/template"
 	"time"
@@ -25,23 +24,23 @@ var (
 // Config the plugin configuration.
 type Config struct {
 	// Prometheus Config 指标来源
-	PrometheusURL string `yaml:"prometheus_url,omitempty"`
+	PrometheusURL string `yaml:"prometheusUrl"`
 	// PromQLQuery 限流指标，比如 nv_gpu_memory_used_bytes / nv_gpu_memory_total_bytes
-	PromQLQuery string `yaml:"promql_query,omitempty"`
+	PromQLQuery string `yaml:"promqlQuery"`
 	// BlockThreshold 限流阈值，比如 Query 结果大于上面 PromQL 返回值
-	BlockThreshold float64 `yaml:"block_threshold,omitempty"`
+	BlockThreshold float64 `yaml:"blockThreshold"`
 	// 限流策略
-	BlockStrategy string `yaml:"block_strategy,omitempty"`
+	BlockStrategy string `yaml:"blockStrategy"`
 	// 是否开启白名单黑名单功能
-	EnableIpList bool `yaml:"enable_ip_list"`
+	EnableIpList bool `yaml:"enableIpList"`
 	// 黑名单
 	Blacklist []string `yaml:"blacklist"`
 	// 白名单
 	Whitelist []string `yaml:"whitelist"`
 	// prometheus 指标更新时间（单位秒）
-	ScrapeInterval int `yaml:"scrape_interval"`
+	ScrapeInterval int `yaml:"scrapeInterval"`
 	// 拒绝概率
-	RejectProbability float64 `yaml:"reject_probability"`
+	RejectProbability float64 `yaml:"rejectProbability"`
 }
 
 // for test
@@ -98,6 +97,15 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		log.Printf("Blacklisted: '%s'", ip.ToString())
 	}
 
+	go func() {
+		for {
+			// 更新指标
+			delay = getMetric(config.PrometheusURL, config.PromQLQuery)
+			log.Printf("current delay: %v ms, scrapeInterval: %d s", delay, config.ScrapeInterval)
+			time.Sleep(time.Duration(config.ScrapeInterval) * time.Second)
+		}
+	}()
+
 	return &Demo{
 		prometheusURL:     config.PrometheusURL,
 		promQLQuery:       config.PromQLQuery,
@@ -114,17 +122,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 }
 
 func (demo *Demo) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	log.Printf("plugin triggered !!!")
-	os.Stdout.WriteString("plugin triggered !!!")
-	go func() {
-		for {
-			// 更新指标
-			delay = demo.getMetric()
-			log.Printf("current delay: %v ms", delay)
-			os.Stdout.WriteString(fmt.Sprintf("current delay: %v ms", delay))
-			time.Sleep(time.Duration(demo.scrapeInterval) * time.Second)
-		}
-	}()
+	log.Printf("plugin triggered")
 
 	if demo.enableIpList {
 		remoteIP, _, err := net.SplitHostPort(req.RemoteAddr)
@@ -161,7 +159,7 @@ func (demo *Demo) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		rw.WriteHeader(429)
 		rw.Write([]byte("the cluster is overload, please try later"))
 
-		os.Stdout.WriteString("reject!!! the cluster is overload, please try later")
+		log.Printf("Reject!!!")
 		return
 	}
 	demo.next.ServeHTTP(rw, req)
@@ -178,8 +176,8 @@ type PrometheusResponse struct {
 	} `json:"data"`
 }
 
-func (demo *Demo) getMetric() float64 {
-	url := fmt.Sprintf("%s/api/v1/query", demo.prometheusURL)
+func getMetric(prometheusURL, promQLQuery string) float64 {
+	url := fmt.Sprintf("%s/api/v1/query", prometheusURL)
 
 	// 创建GET请求
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -189,7 +187,7 @@ func (demo *Demo) getMetric() float64 {
 
 	// 添加查询参数
 	q := req.URL.Query()
-	q.Add("query", demo.promQLQuery)
+	q.Add("query", promQLQuery)
 	req.URL.RawQuery = q.Encode()
 
 	// 添加自定义请求头
