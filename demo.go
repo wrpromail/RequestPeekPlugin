@@ -2,18 +2,17 @@ package TritonRateLimiter
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/jasinxie/TritonRateLimiter/ipchecking"
-	"github.com/prometheus/common/model"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"text/template"
 	"time"
 
-	"github.com/prometheus/client_golang/api"
-	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/jasinxie/TritonRateLimiter/ipchecking"
 )
 
 var (
@@ -108,6 +107,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 }
 
 func (demo *Demo) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	fmt.Printf("plugin triggered !!!")
 	go func() {
 		for {
 			// 更新指标
@@ -149,40 +149,76 @@ func (demo *Demo) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	demo.next.ServeHTTP(rw, req)
 }
 
-func (demo *Demo) getMetric() float64 {
-	// 创建Prometheus API客户端
-	client, err := api.NewClient(api.Config{
-		Address: fmt.Sprintf("%s/query", demo.prometheusURL),
-	})
+type PrometheusResponse struct {
+	Status string `json:"status"`
+	Data   struct {
+		ResultType string `json:"resultType"`
+		Result     []struct {
+			Metric map[string]string `json:"metric"`
+			Value  []json.RawMessage `json:"value"`
+		} `json:"result"`
+	} `json:"data"`
+}
+
+func (demo *Demo) doGet() {
+	url := fmt.Sprintf("%s/api/v1/query", demo.prometheusURL)
+	fmt.Println(url)
+
+	// 创建GET请求
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		log.Fatalf("Error creating Prometheus client: %v", err)
+		log.Fatalf("Error creating GET request: %v", err)
 	}
 
-	// 创建v1 API接口实例
-	api := v1.NewAPI(client)
+	// 添加查询参数
+	q := req.URL.Query()
+	q.Add("query", demo.promQLQuery)
+	req.URL.RawQuery = q.Encode()
 
-	// 查询Prometheus指标
-	result, warnings, err := api.Query(context.Background(), demo.promQLQuery, time.Now())
+	// 添加自定义请求头
+	req.Header.Set("Authorization", "")
+	//req.Header.Set("User-Agent", "MyApp")
+
+	// 发送请求
+	client := &http.Client{}
+	response, err := client.Do(req)
 	if err != nil {
-		log.Fatalf("Error querying Prometheus: %v", err)
+		log.Fatalf("Error sending GET request: %v", err)
 	}
-	if len(warnings) > 0 {
-		fmt.Printf("Warnings: %v\n", warnings)
-	}
+	defer response.Body.Close()
 
-	// 打印查询结果
-	//fmt.Printf("Query result: %v\n", result)
-
-	vector, ok := result.(model.Vector)
-	if !ok {
-		log.Fatalf("Unexpected result type: %T", result)
+	// 读取响应内容
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Fatalf("Error reading response body: %v", err)
 	}
 
-	var latestValue float64
-	for _, sample := range vector {
-		fmt.Printf("Timestamp: %v, Value: %v\n", sample.Timestamp, sample.Value)
-		latestValue = float64(sample.Value)
+	// 打印响应状态码和内容
+	fmt.Println("Status code:", response.StatusCode)
+	fmt.Println("Response body:", string(body))
+
+	var resp PrometheusResponse
+	err = json.Unmarshal(body, &resp)
+	if err != nil {
+		panic(err)
 	}
 
-	return latestValue
+	fmt.Printf("Status: %s\n", resp.Status)
+	fmt.Printf("ResultType: %s\n", resp.Data.ResultType)
+	for i, result := range resp.Data.Result {
+		fmt.Printf("Result %d:\n", i+1)
+		fmt.Printf("  Metric: %v\n", result.Metric)
+
+		var timestamp float64
+		var value string
+		err = json.Unmarshal(result.Value[0], &timestamp)
+		if err != nil {
+			panic(err)
+		}
+		err = json.Unmarshal(result.Value[1], &value)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("  Value: [%.3f, %s]\n", timestamp, value)
+	}
 }

@@ -1,9 +1,8 @@
 package ipchecking_test
 
 import (
+	"github.com/jasinxie/TritonRateLimiter/ipchecking"
 	"testing"
-
-	"github.com/tomMoulard/fail2ban/ipchecking"
 )
 
 func TestIPv4Generation(t *testing.T) {
