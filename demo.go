@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"text/template"
 	"time"
@@ -38,6 +40,8 @@ type Config struct {
 	Whitelist []string `yaml:"whitelist"`
 	// prometheus 指标更新时间（单位秒）
 	ScrapeInterval int `yaml:"scrape_interval"`
+	// 拒绝概率
+	RejectProbability float64 `yaml:"reject_probability"`
 }
 
 // for test
@@ -62,16 +66,17 @@ func CreateConfig() *Config {
 
 // Demo demo Demo plugin.
 type Demo struct {
-	next           http.Handler
-	name           string
-	template       *template.Template
-	prometheusURL  string
-	promQLQuery    string
-	blacklist      []ipchecking.IP
-	whitelist      []ipchecking.IP
-	scrapeInterval int
-	blockThreshold float64
-	enableIpList   bool
+	next              http.Handler
+	name              string
+	template          *template.Template
+	prometheusURL     string
+	promQLQuery       string
+	blacklist         []ipchecking.IP
+	whitelist         []ipchecking.IP
+	scrapeInterval    int
+	blockThreshold    float64
+	enableIpList      bool
+	rejectProbability float64
 }
 
 // New created demo new Demo plugin.
@@ -94,26 +99,29 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	}
 
 	return &Demo{
-		prometheusURL:  config.PrometheusURL,
-		promQLQuery:    config.PromQLQuery,
-		enableIpList:   config.EnableIpList,
-		blacklist:      blacklist,
-		whitelist:      whitelist,
-		scrapeInterval: config.ScrapeInterval,
-		blockThreshold: config.BlockThreshold,
-		next:           next,
-		name:           name,
-		template:       template.New("demo").Delims("[[", "]]"),
+		prometheusURL:     config.PrometheusURL,
+		promQLQuery:       config.PromQLQuery,
+		enableIpList:      config.EnableIpList,
+		blacklist:         blacklist,
+		whitelist:         whitelist,
+		scrapeInterval:    config.ScrapeInterval,
+		blockThreshold:    config.BlockThreshold,
+		rejectProbability: config.RejectProbability,
+		next:              next,
+		name:              name,
+		template:          template.New("demo").Delims("[[", "]]"),
 	}, nil
 }
 
 func (demo *Demo) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	fmt.Printf("plugin triggered !!!")
+	log.Printf("plugin triggered !!!")
+	os.Stdout.WriteString("plugin triggered !!!")
 	go func() {
 		for {
 			// 更新指标
 			delay = demo.getMetric()
 			log.Printf("current delay: %v ms", delay)
+			os.Stdout.WriteString(fmt.Sprintf("current delay: %v ms", delay))
 			time.Sleep(time.Duration(demo.scrapeInterval) * time.Second)
 		}
 	}()
@@ -143,10 +151,17 @@ func (demo *Demo) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	if delay > demo.blockThreshold {
+	// 初始化随机数生成器的种子
+	rand.Seed(time.Now().UnixNano())
+	// 生成一个0到1之间的随机浮点数
+	randomValue := rand.Float64()
+	// 以20%的概率拒绝
+	if delay > demo.blockThreshold && randomValue <= demo.rejectProbability {
 		rw.Header().Set("Content-Type", "application/grpc")
 		rw.WriteHeader(429)
 		rw.Write([]byte("the cluster is overload, please try later"))
+
+		os.Stdout.WriteString("reject!!! the cluster is overload, please try later")
 		return
 	}
 	demo.next.ServeHTTP(rw, req)

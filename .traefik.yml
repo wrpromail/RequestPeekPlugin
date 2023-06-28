@@ -18,3 +18,4 @@ testData:
   block_threshold: 95
   promql_query: "round(sum (increase(nv_inference_request_duration_us[24h])) / sum (increase(nv_inference_request_success[24h])) / 1000)"
   prometheus_url: "http://81.69.152.80:9090"
+  reject_probability: 0.2
