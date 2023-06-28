@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/jasinxie/TritonRateLimiter/ipchecking"
 	"github.com/prometheus/common/model"
 	"log"
 	"net"
@@ -13,8 +14,6 @@ import (
 
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
-
-	"github.com/traefik/plugindemo/ipchecking"
 )
 
 var (
