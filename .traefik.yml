@@ -2,20 +2,12 @@ displayName: TritonPlugin
 type: middleware
 iconPath: .assets/icon.png
 
-import: github.com/jasinxie/TritonRateLimiter
+import: github.com/wrpromail/RequestPeekPlugin
 
-summary: 'Traefik Plugin for Triton Server'
+summary: 'Traefik Plugin for Peeking Request Content'
 
 testData:
-  enable_ip_list: false
-  whitelist:
-    - "::1"
-    - "127.0.0.1"
-  blacklist:
-    - "192.168.0.0/24"
-  scrape_interval: 5
-  block_strategy: ""
-  block_threshold: 95
-  promql_query: "round(sum (increase(nv_inference_request_duration_us[24h])) / sum (increase(nv_inference_request_success[24h])) / 1000)"
-  prometheus_url: "http://81.69.152.80:9090"
+  report_type: "UDP"
+  report_addr: ""
+
   reject_probability: 0.2
